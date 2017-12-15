@@ -42,6 +42,7 @@ public class ApacheLogKafkaConsumer {
         while(true) {
             ConsumerRecords<String, String> logRecords = kafkaConsumer.poll(500);
 
+            // on poll, if no records read, quit when logs haven't been read for noRecordCount threshold //
             if(logRecords.count() == 0) {
                 if(++noRecordCount > noRecordThreshold)
                     break;

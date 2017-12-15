@@ -60,18 +60,16 @@ public class DdosLogProcessor {
         BufferedWriter ipViolationBufferedWriter = null;
         FileWriter ipViolationFileWriter = null;
 
-        jsonMessage.put("metadata",
-                jsonMessage.getJSONObject("metadata")
-                        .put("violation_discover_timestamp", Instant.now().toString()));
+        attachViolationMetadata(jsonMessage);
 
         try {
             ipViolationFileWriter = new FileWriter("/home/cloudera/phdata/ip_violations.txt", true);
             ipViolationBufferedWriter = new BufferedWriter(ipViolationFileWriter);
 
-            if(!ipAddressesPublished.contains(ipAddress.getPaddedIpAddress())) {
+//            if(!ipAddressesPublished.contains(ipAddress.getPaddedIpAddress())) {
                 ipViolationBufferedWriter.write(jsonMessage.toString());
                 ipViolationBufferedWriter.newLine();
-            }
+//            }
 
             ipAddressesPublished.add(ipAddress.getPaddedIpAddress());
             ipOctetsPublished.add(ipAddress.getFirstTwoOctets());
@@ -89,6 +87,12 @@ public class DdosLogProcessor {
                 ex.printStackTrace();
             }
         }
+    }
+
+    public void attachViolationMetadata(JSONObject jsonMessage) {
+        jsonMessage.put("metadata",
+                jsonMessage.getJSONObject("metadata")
+                        .put("violation_discover_timestamp", Instant.now().toString()));
     }
 
     public Set<String> getPublishedOctets() {

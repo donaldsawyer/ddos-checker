@@ -15,9 +15,35 @@ import java.util.concurrent.ExecutionException;
 
 public class Main {
     public static void main(String [] args) throws ExecutionException, InterruptedException {
-        File logFile = new File("/home/cloudera/phdata/apache-access-log-3.txt");
+        // setup program state //
+        File logFile = new File("/home/cloudera/phdata/apache-access-log.txt");
         String topicName = "apache_log";
+        ApacheLogPublisher alp = new ApacheLogPublisher(topicName);
+        ApacheLogKafkaConsumer alc =
+                new ApacheLogKafkaConsumer(topicName, "test-group");
+        DdosLogProcessor ddosLogProcessor = new DdosLogProcessor(1);
 
+        // recreate the topic fresh //
+        setupKafkaTopic(topicName);
+
+        // THREAD TO START THE KAFKA PRODUCER //
+        new Thread(() -> {
+            alp.publishFileDataToKafka(logFile.getAbsolutePath());
+        }).start();
+
+        startProcessingFromKafka(alc, ddosLogProcessor);
+    }
+
+    private static void startProcessingFromKafka(ApacheLogKafkaConsumer alc, DdosLogProcessor ddosLogProcessor) {
+        // START THE KAFKA LISTENER //
+        try {
+            alc.listenForLogs(ddosLogProcessor);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void setupKafkaTopic(String topicName) {
         // WIPE OUT EXISTING TOPIC AND RECREATE IT //
         String zookeeperConnectionString = "quickstart.cloudera:2181";
         int sessionTimeoutMilliseconds = 10000;
@@ -48,22 +74,5 @@ public class Main {
                 topicConfig,
                 RackAwareMode.Enforced$.MODULE$);
         zkClient.close();
-
-        ApacheLogPublisher alp = new ApacheLogPublisher(topicName);
-        ApacheLogKafkaConsumer alc =
-                new ApacheLogKafkaConsumer(topicName, "test-group");
-        DdosLogProcessor ddosLogProcessor = new DdosLogProcessor(1);
-
-        // THREAD TO START THE KAFKA PRODUCER //
-        new Thread(() -> {
-            alp.publishFileDataToKafka(logFile.getAbsolutePath());
-        }).start();
-
-        // START THE KAFKA LISTENER //
-        try {
-            alc.listenForLogs(ddosLogProcessor);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 }
